@@ -98,7 +98,7 @@ app.post('/', async function (req, res) {
     }
     fs.writeFile(path.join(__dirname, fileName), JSON.stringify(req.body), function (err, file) {
         if (err) {
-            res.status(400).set('Content-Type','text/plain').send(err);
+            res.status(500).set('Content-Type','text/plain').send(err);
             return;
         }
         else {
@@ -127,6 +127,29 @@ app.patch('/', async function (req, res) {
         }
         else {
             pushChanges({'method':'patch','file':fileName,'handle':res});
+        }
+    });
+});
+
+app.delete('/', async function (req, res) {
+    const reqCheck = await validateReq(req);
+    if (reqCheck.status !== 200) {
+        res.status(reqCheck.status).set('Content-Type','text/plain').send("Invalid project data: " + reqCheck.msg);
+        return;
+    }
+    const type = req.body['type'] + "flower_projects";
+    const fileName = type + '/' + req.body['id'] + '.json';
+    if (!fs.existsSync(path.join(__dirname, fileName))){
+        res.status(500).set('Content-Type','text/plain').send("Project does not exists");
+        return
+    }
+    fs.unlink(path.join(__dirname, fileName), function (err) {
+        if (err) {
+            res.status(400).set('Content-Type','text/plain').send(err);
+            return;
+        }
+        else {
+            pushChanges({'method':'delete','file':fileName,'handle':res});
         }
     });
 });
@@ -162,6 +185,10 @@ function pushChanges(event) {
     if (event.method === 'patch') {
         commitMessage = `"Updated file ${event.file}"`;
         okayMessage = 'Successfully updated project ' + event.file;
+    }
+    if (event.method === 'delete') {
+        commitMessage = `"Removed file ${event.file}"`;
+        okayMessage = 'Successfully removed project ' + event.file;
     }
     const addProc = spawn('./gitControl.sh', ["-t", gitToken, "-r", repoUrl, "-f", event.file, "-m", commitMessage]);
     addProc.stdout.on('data', data => console.log(`stdout: ${data}`));
