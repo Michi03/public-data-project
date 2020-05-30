@@ -87,7 +87,7 @@ app.get('/', async function (req, res) {
 app.post('/', async function (req, res) {
     const reqCheck = await validateReq(req);
     if (reqCheck.status !== 200) {
-        res.status(reqCheck.status).set('Content-Type','text/plain').send("Invalid project data: " + reqCheck.msg);
+        res.status(reqCheck.status).set('Content-Type','text/plain').send("Invalid request: " + reqCheck.msg);
         return;
     }
     const type = req.body['type'] + "flower_projects";
@@ -159,6 +159,9 @@ app.listen(port, host, function () {
 });
 
 function validateReq(req) {
+    if (typeof req.header('Content-Type') !== 'string' || req.header('Content-Type').toLowerCase() !== 'application/json') {
+      return {'status': 400, 'msg': 'only application/json is accepted as content-type'};
+    }
     if (typeof req.body !== "object" || req.body === null) {
       return {'status': 400, 'msg': 'could not read body'};
     }
