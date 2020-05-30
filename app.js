@@ -104,6 +104,26 @@ app.post('/', async function (req, res) {
     }
 });
 
+app.patch('/', async function (req, res) {
+    let reqCheck = await validateReq(req);
+    if (reqCheck.status !== 200) {
+        res.status(reqCheck.status).set('Content-Type','text/plain').send("Invalid project data: " + reqCheck.msg);
+        return;
+    }
+    else {
+        const fileName = req.body['type'] + '/' + req.body['id'];
+        fs.writeFile(path.join(__dirname, fileName), JSON.stringify(req.body), async function (err, file) {
+            if (err) {
+                res.status(500).set('Content-Type','text/plain').send(err);
+                return;
+            }
+            else {
+                pushChanges({'method':'patch','file':fileName,'handle':res});
+            }
+        });
+    }
+});
+
 app.listen(port, host, function () {
   console.log('Example app listening on ' + host + ':' + port);
 });
@@ -122,32 +142,33 @@ function validateReq(req) {
 }
 
 function pushChanges(event) {
-    if (typeof event.method !== 'string' || typeof event.file !== 'string' || typeof event.handle === 'undefined') {
+    if (typeof event.file !== 'string' || typeof event.handle === 'undefined') {
         console.log("Invalid call of pushChanges");
         event.handle.status(500).set('Content-Type','text/plain').send("Internal server error!");
         return;
     }
+    let commitMessage;
     if (event.method === 'post') {
-        const addProc = spawn('./gitControl.sh', ["-t", gitToken, "-r", repoUrl, "-f", event.file, "-m", `"Added file ${event.file}"`]);
-        addProc.stdout.on('data', data => console.log(`stdout: ${data}`));
-        addProc.stderr.on('data', data => console.log(`stderr: ${data}`));
-        addProc.on('error', (error) => {
-            event.handle.status(500).set('Content-Type','text/plain').send(error.message);
-            return;
-        });
-        addProc.on('exit', code => {
-            if (code !== 0) {
-                event.handle.status(500).set('Content-Type','text/plain').send("commiting changes failed");
-                return;
-            }
-            else {
-                event.handle.status(200).set('Content-Type','text/plain').send('okay');
-            }
-        });
+        commitMessage = `"Added file ${event.file}"`;
     }
-    else {
-        console.log('Unkown method: ' + event.method);
-        event.handle.status(500).set('Content-Type','text/plain').send("Internal server error!");
+    if (event.method === 'patch') {
+        commitMessage = `"Updated file ${event.file}"`;
+    }
+    const addProc = spawn('./gitControl.sh', ["-t", gitToken, "-r", repoUrl, "-f", event.file, "-m", commitMessage]);
+    addProc.stdout.on('data', data => console.log(`stdout: ${data}`));
+    addProc.stderr.on('data', data => console.log(`stderr: ${data}`));
+    addProc.on('error', (error) => {
+        event.handle.status(500).set('Content-Type','text/plain').send(error.message);
         return;
-    }
+    });
+    addProc.on('exit', code => {
+        if (code !== 0) {
+            event.handle.status(500).set('Content-Type','text/plain').send("commiting changes failed");
+            return;
+        }
+        else {
+            event.handle.status(200).set('Content-Type','text/plain').send('okay');
+            return;
+        }
+    });
 }
