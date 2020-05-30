@@ -72,11 +72,11 @@ if (!gitToken) {
 }
 
 // create wind and sun directories if they don't exist
-if (!fs.existsSync('./sun')){
-    fs.mkdirSync('./sun');
+if (!fs.existsSync('./sunflower_projects')){
+    fs.mkdirSync('./sunflower_projects');
 }
-if (!fs.existsSync('./wind')){
-    fs.mkdirSync('./wind');
+if (!fs.existsSync('./windflower_projects')){
+    fs.mkdirSync('./windflower_projects');
 }
 
 app.get('/', async function (req, res) {
@@ -85,43 +85,50 @@ app.get('/', async function (req, res) {
 });
 
 app.post('/', async function (req, res) {
-    let reqCheck = await validateReq(req);
+    const reqCheck = await validateReq(req);
     if (reqCheck.status !== 200) {
         res.status(reqCheck.status).set('Content-Type','text/plain').send("Invalid project data: " + reqCheck.msg);
         return;
     }
-    else {
-        const fileName = req.body['type'] + '/' + req.body['id'];
-        fs.writeFile(path.join(__dirname, fileName), JSON.stringify(req.body), async function (err, file) {
-            if (err) {
-                res.status(500).set('Content-Type','text/plain').send(err);
-                return;
-            }
-            else {
-                pushChanges({'method':'post','file':fileName,'handle':res});
-            }
-        });
+    const type = req.body['type'] + "flower_projects";
+    const fileName = type + '/' + req.body['id'] + '.json';
+    if (fs.existsSync(path.join(__dirname, fileName))){
+        res.status(500).set('Content-Type','text/plain').send("Project already exists");
+        return
     }
+    fs.writeFile(path.join(__dirname, fileName), JSON.stringify(req.body), function (err, file) {
+        if (err) {
+            res.status(400).set('Content-Type','text/plain').send(err);
+            return;
+        }
+        else {
+            pushChanges({'method':'post','file':fileName,'handle':res});
+        }
+    });
 });
 
 app.patch('/', async function (req, res) {
-    let reqCheck = await validateReq(req);
+    const reqCheck = await validateReq(req);
     if (reqCheck.status !== 200) {
         res.status(reqCheck.status).set('Content-Type','text/plain').send("Invalid project data: " + reqCheck.msg);
         return;
     }
-    else {
-        const fileName = req.body['type'] + '/' + req.body['id'];
-        fs.writeFile(path.join(__dirname, fileName), JSON.stringify(req.body), async function (err, file) {
-            if (err) {
-                res.status(500).set('Content-Type','text/plain').send(err);
-                return;
-            }
-            else {
-                pushChanges({'method':'patch','file':fileName,'handle':res});
-            }
-        });
+    const type = req.body['type'] + "flower_projects";
+    const fileName = type + '/' + req.body['id'] + '.json';
+    let updateRes = await updateProject(fileName, req.body);
+    if (updateRes.status !== 200) {
+        res.status(updateRes.status).set('Content-Type','text/plain').send(updateRes.data);
+        return;
     }
+    fs.writeFile(path.join(__dirname, fileName), JSON.stringify(req.body), function (err, file) {
+        if (err) {
+            res.status(500).set('Content-Type','text/plain').send(err);
+            return;
+        }
+        else {
+            pushChanges({'method':'patch','file':fileName,'handle':res});
+        }
+    });
 });
 
 app.listen(port, host, function () {
@@ -147,12 +154,14 @@ function pushChanges(event) {
         event.handle.status(500).set('Content-Type','text/plain').send("Internal server error!");
         return;
     }
-    let commitMessage;
+    let commitMessage, okayMessage;
     if (event.method === 'post') {
         commitMessage = `"Added file ${event.file}"`;
+        okayMessage = 'Successfully created project ' + event.file;
     }
     if (event.method === 'patch') {
         commitMessage = `"Updated file ${event.file}"`;
+        okayMessage = 'Successfully updated project ' + event.file;
     }
     const addProc = spawn('./gitControl.sh', ["-t", gitToken, "-r", repoUrl, "-f", event.file, "-m", commitMessage]);
     addProc.stdout.on('data', data => console.log(`stdout: ${data}`));
@@ -167,8 +176,26 @@ function pushChanges(event) {
             return;
         }
         else {
-            event.handle.status(200).set('Content-Type','text/plain').send('okay');
+            event.handle.status(200).set('Content-Type','text/plain').send(okayMessage);
             return;
         }
     });
+}
+
+function updateProject(fileName, project) {
+    return new Promise(resolve => {
+        if (!fs.existsSync(path.join(__dirname, fileName))){
+            resolve({'status': 404, 'data': 'Project does not exists'});
+            return;
+        }
+        fs.readFile(path.join(__dirname, fileName), 'utf8', function (err, data) {
+            if (err) {
+                resolve({'status': 500, 'data': err});
+                return;
+            }
+            let result = JSON.parse(data);
+            Object.keys(project).forEach(key => result[key] = project[key]);
+            resolve({'status': 200, 'data': result});
+        });
+    })
 }
