@@ -1,9 +1,11 @@
 #!/bin/bash
-argCount=0
 function printHelp() {
     echo "Commands:"
-    echo "  help                                                         prints this message"
-    echo "  post -r REPOSITORY -t ACCESS_TOKEN -m MESSAGE  FILENAME(S)   creates a commit with the given file(s) to the given repository with the given message using the given token"
+    echo "  -h                prints this message"
+    echo "  -r REPOSITORY     set the repository where the data is stored"
+    echo "  -t ACCESS_TOKEN   set the git access token used"
+    echo "  -m MESSAGE        provide a commit message"
+    echo "  -f FILENAME       set the path to the file that should be committed"
 }
 
 function error() {
@@ -12,11 +14,10 @@ function error() {
 }
 
 function add() {
-    if [ $# -lt 1 ]; then
-        error "No file provided to add"
+    if [ -z $fileName ]; then
+        error "No file to add provided"
     fi
     git add $fileName
-    exit 0
 }
 
 function push() {
@@ -31,43 +32,34 @@ function push() {
     fi
     git commit -m "$commitMsg"
     git push -f https://script:$accessToken@$repoUrl
-    exit 0
 }
 
-while getopts "r:t:m:f" o; do
-  	case "${o}" in
-    		r)
-            argCount=$((argCount + 2))
+while getopts "r:t:m:f:h" o; do
+    case "${o}" in
+        r)
             repoUrl=${OPTARG}
             repoUrl=$(echo $repoUrl | sed 's,http[s]*://,,')
-      			;;
-    		t)
-            argCount=$((argCount + 2))
-      			accessToken=${OPTARG}
-      			;;
-    		m)
-            argCount=$((argCount + 2))
-      			commitMsg=${OPTARG}
-      			;;
-        *)
-            echo "Use command help for help"
             ;;
-  	esac
+        t)
+            accessToken=${OPTARG}
+            ;;
+        m)
+            commitMsg=${OPTARG}
+            ;;
+        f)
+            fileName=${OPTARG}
+            ;;
+        h)
+            printHelp
+            exit 0
+            ;;
+    esac
 done
 
 if [ $# -lt 1 ]; then
     printHelp
     exit 1
 fi
-if [ $1 == "post" ]; then
-    argCount=$((argCount + 1))
-    for fileName in "${@:$argCount}"; do
-        add $@
-    push
-fi
-if [ $1 == "help" ]; then
-    printHelp
-    exit 0
-else
-    error "Unkown command: $1"
-fi
+add
+push
+exit 0

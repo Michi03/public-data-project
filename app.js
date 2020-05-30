@@ -14,6 +14,7 @@ const MISSING_ARGUMENT = 2;
 // config values
 var port = 2201;
 var host = "0.0.0.0";
+var repoUrl = "github.com/Michi03/public-data-project";
 var gitToken;
 
 const args = process.argv.slice(2);
@@ -45,12 +46,21 @@ for (let i = 0; i < args.length; i++) {
         else
             gitToken = args[i+1];
         break;
+    case '--repo':
+        if (typeof args[i+1] === 'undefined') {
+            console.log('--repo requires an argument');
+            process.exit(INVALID_ARGUMENT);
+        }
+        else
+            repoUrl = args[i+1];
+        break;
     case '--help':
         console.log("Public Data Synchronization\n\
-          --token  git access token used to update data repository (required)\n\
           --help   print this message\n\
           --host   set the host address of the server (default 0.0.0.0)\n\
-          --port   set the port of the server (default 2201)\n")
+          --port   set the port of the server (default 2201)\n\
+          --repo   url of the repository that holds the data (default github.com/Michi03/public-data-project)\n\
+          --token  git access token used to update data repository\n")
         process.exit(SUCCESS);
         break;
     }
@@ -88,9 +98,7 @@ app.post('/', async function (req, res) {
                 return;
             }
             else {
-                pushChanges({'method':'post','file':fileName}, resp => {
-                    res.status(resp.status).set('Content-Type','text/plain').send(resp.msg);
-                });
+                pushChanges({'method':'post','file':fileName,'handle':res});
             }
         });
     }
@@ -113,28 +121,33 @@ function validateReq(req) {
     return {'status': 200, 'msg': 'okay'};
 }
 
-async function pushChanges(event) {
-    if (typeof event.method !== 'string' || typeof event.file !== 'string') {
+function pushChanges(event) {
+    if (typeof event.method !== 'string' || typeof event.file !== 'string' || typeof event.handle === 'undefined') {
         console.log("Invalid call of pushChanges");
-        return {'status':500, 'msg': 'Invalid event'};
+        event.handle.status(500).set('Content-Type','text/plain').send("Internal server error!");
+        return;
     }
     if (event.method === 'post') {
-        const addProc = spawn('./gitControl.sh', ['post', event.file, "-t", config.access_token, "-r", config.repository]);
+        const addProc = spawn('./gitControl.sh', ["-t", gitToken, "-r", repoUrl, "-f", event.file, "-m", `"Added file ${event.file}"`]);
         addProc.stdout.on('data', data => console.log(`stdout: ${data}`));
         addProc.stderr.on('data', data => console.log(`stderr: ${data}`));
         addProc.on('error', (error) => {
-            return {'status':500,'msg':error.message};
+            event.handle.status(500).set('Content-Type','text/plain').send(error.message);
+            return;
         });
-        addProc.on('close', code => {
+        addProc.on('exit', code => {
             if (code !== 0) {
-                return {'status':500,'msg':'commiting changes failed'};
+                event.handle.status(500).set('Content-Type','text/plain').send("commiting changes failed");
+                return;
             }
             else {
-                return {'status':200,'msg':'okay'};
+                event.handle.status(200).set('Content-Type','text/plain').send('okay');
             }
         });
     }
     else {
-        return {'status':500, 'msg': 'Unkown method: ' + event.method};
+        console.log('Unkown method: ' + event.method);
+        event.handle.status(500).set('Content-Type','text/plain').send("Internal server error!");
+        return;
     }
 }
