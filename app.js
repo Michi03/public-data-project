@@ -3,8 +3,12 @@ const app = require('express')();
 const fs = require('fs');
 const path = require('path');
 const bodyParser = require('body-parser');
+const util = require('util');
+const readdir = util.promisify(fs.readdir);
 const {spawn} = require("child_process");
 app.use(bodyParser.json({limit:'100mb'}));
+
+
 
 // exit codes
 const SUCCESS = 0;
@@ -71,16 +75,14 @@ if (!gitToken) {
     process.exit(MISSING_ARGUMENT);
 }
 
-// create wind and sun directories if they don't exist
-if (!fs.existsSync('./sunflower_projects')){
-    fs.mkdirSync('./sunflower_projects');
-}
-if (!fs.existsSync('./windflower_projects')){
-    fs.mkdirSync('./windflower_projects');
-}
-
 app.get('/', async function (req, res) {
-    res.status(200).set('Content-Type','text/plain').send("This is the public-data-synchronization service. If you want to update the data repository, please send a POST request with a single JSON file containing the updated data to this URL.");
+    let dirTree = await createDirTree(__dirname, {}, ['.git','.gitignore','node_modules']);
+    if (dirTree.status !== 200) {
+        res.status(dirTree.status).set('Content-Type','text/plain').send("Failed to create directory tree: " + dirTree.data);
+        return;
+    }
+    res.status(dirTree.status).set('Content-Type','text/json').send(dirTree.data);
+    console.log(dirTree);
     return;
 });
 
@@ -228,4 +230,33 @@ function updateProject(fileName, project) {
             resolve({'status': 200, 'data': result});
         });
     })
+}
+
+async function createDirTree(root, dirTree, except) {
+    const stats = fs.lstatSync(root);
+    if (stats.isDirectory()) {
+        let files;
+        try {
+            files = await readdir(root);
+        } catch (err) {
+            return {'status': 500, data: err};
+        }
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (typeof dirTree[file] !== 'undefined' || except.includes(file))
+                continue;
+            dirTree[file] = {};
+            if (fs.lstatSync(path.join(root,file)).isDirectory()) {
+                let subTree = await createDirTree(path.join(root,file), {}, except);
+                if (subTree.status === 200)
+                    dirTree[file] = subTree.data;
+                else
+                    return subTree;
+            }
+        }
+        return {'status': 200, 'data': dirTree};
+    }
+    else {
+        return {'status': 500, data: "Invalid call to createDirTree: " + root + " is not a directory"};
+    }
 }
