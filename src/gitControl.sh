@@ -1,4 +1,5 @@
 #!/bin/bash
+# TODO -f support for multiple files
 function printHelp() {
     echo "Commands:"
     echo "  -h                prints this message"
