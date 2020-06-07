@@ -13,7 +13,7 @@ const args = util.parseArgs(process.argv.slice(2));
 
 app.get('/', async function (req, res) {
     util.log(req);
-    let dirTree = await fs.createDirTree(path.join(__dirname, '..'), {}, ['.git','.gitignore','node_modules']);
+    let dirTree = await fs.getDirTree();
     if (dirTree.status !== 200) {
         res.status(dirTree.status).set('Content-Type','text/plain').send("Failed to create directory tree: " + dirTree.data);
         return;
@@ -24,7 +24,7 @@ app.get('/', async function (req, res) {
 
 app.post('/', async function (req, res) {
     util.log(req);
-    let tempRes = await util.validateReq(req, ['application/json', 'application/zip']);
+    let tempRes = await util.validateReq(req);
     if (tempRes.status !== 200) {
         res.status(tempRes.status).set('Content-Type','text/plain').send("Invalid request: " + tempRes.msg);
         return;
@@ -39,7 +39,7 @@ app.post('/', async function (req, res) {
 
 app.patch('/', async function (req, res) {
     util.log(req);
-    let tempRes = await util.validateReq(req, ['application/json']);
+    let tempRes = await util.validateReq(req);
     if (tempRes.status !== 200) {
         res.status(tempRes.status).set('Content-Type','text/plain').send("Invalid request: " + tempRes.msg);
         return;
@@ -54,7 +54,7 @@ app.patch('/', async function (req, res) {
 
 app.delete('/', async function (req, res) {
     util.log(req);
-    let tempRes = await util.validateReq(req, ['application/json']);
+    let tempRes = await util.validateReq(req);
     if (tempRes.status !== 200) {
         res.status(tempRes.status).set('Content-Type','text/plain').send("Invalid request: " + tempRes.msg);
         return;

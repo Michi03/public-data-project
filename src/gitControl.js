@@ -2,7 +2,6 @@ const {spawn} = require("child_process");
 
 var projects = [];
 
-// TODO support changes in multiple files
 function pushChanges(event, args) {
     if (typeof event.file !== 'string' || typeof event.handle === 'undefined') {
         console.log("Invalid call of pushChanges");
@@ -11,18 +10,18 @@ function pushChanges(event, args) {
     }
     let commitMessage, okayMessage;
     if (event.method === 'post') {
-        commitMessage = `"Added file ${event.file}"`;
-        okayMessage = 'Successfully created project ' + event.file;
+        commitMessage = `"Added files ${event.files}"`;
+        okayMessage = 'Successfully created project';
     }
     if (event.method === 'patch') {
-        commitMessage = `"Updated file ${event.file}"`;
-        okayMessage = 'Successfully updated project ' + event.file;
+        commitMessage = `"Updated file ${event.files}"`;
+        okayMessage = 'Successfully updated project';
     }
     if (event.method === 'delete') {
-        commitMessage = `"Removed file ${event.file}"`;
-        okayMessage = 'Successfully removed project ' + event.file;
+        commitMessage = `"Removed file ${event.files}"`;
+        okayMessage = 'Successfully removed project';
     }
-    const addProc = spawn('./gitControl.sh', ["-t", args.gitToken, "-r", args.repoUrl, "-f", event.file, "-m", commitMessage]);
+    const addProc = spawn('./gitControl.sh', ["-t", args.gitToken, "-r", args.repoUrl, "-m", commitMessage, "-f", event.files]);
     addProc.stdout.on('data', data => console.log(`stdout: ${data}`));
     addProc.stderr.on('data', data => console.log(`stderr: ${data}`));
     addProc.on('error', (error) => {

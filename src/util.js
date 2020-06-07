@@ -8,6 +8,8 @@ const DEFAULT_REPO = "github.com/Michi03/public-data-project";
 const DEFAULT_HOST = "0.0.0.0";
 const DEFAULT_PORT = 2201;
 
+var projects = {};
+
 function parseArgs (args) {
     let res = {port: DEFAULT_PORT, host: DEFAULT_HOST, repoUrl: DEFAULT_REPO};
     for (let i = 0; i < args.length; i++) {
@@ -63,19 +65,42 @@ function parseArgs (args) {
     return res;
 }
 
-function validateReq(req, contentTypes) {
+function validateReq(req) {
+    let contentTypes = [];
+    switch (req.method) {
+        case 'DELETE':
+            contentTypes = ['application/json'];
+            if (typeof req.body['id'] !== "string" || req.body['id'].length < 1) {
+              return {'status': 400, 'msg': 'missing id'};
+            }
+            if (typeof projects[req.body['id']] === 'undefined') {
+                return {'status': 404, 'msg': "Project does not exist"};
+            }
+            break;
+        case 'PATCH':
+            contentTypes = ['application/json'];
+            if (typeof req.body['id'] !== "string" || req.body['id'].length < 1) {
+              return {'status': 400, 'msg': 'missing id'};
+            }
+            if (typeof projects[req.body['id']] === 'undefined') {
+                return {'status': 404, 'msg': "Project does not exist"};
+            }
+            break;
+        case 'POST':
+            contentTypes = ['application/json', 'application/zip'];
+            if (typeof req.body['id'] !== "string" || req.body['id'].length < 1) {
+              return {'status': 400, 'msg': 'missing id'};
+            }
+            if (typeof projects[req.body['id']] !== 'undefined') {
+                return {'status': 400, 'msg': "Project already exists"};
+            }
+            break;
+    }
     if (typeof req.header('Content-Type') !== 'string' || !contentTypes.includes(req.header('Content-Type').toLowerCase())) {
       return {'status': 400, 'msg': `content-type ${req.header('Content-Type')} not supported, supported types are [${contentTypes}]`};
     }
     if (typeof req.body !== "object" || req.body === null) {
       return {'status': 400, 'msg': 'could not read body'};
-    }
-    switch (req.method) {
-        case 'DELETE':
-            if (typeof req.body['id'] !== "string" || req.body['id'].length < 1) {
-              return {'status': 400, 'msg': 'missing id'};
-            }
-            break;
     }
     return {'status': 200, 'msg': 'okay'};
 }

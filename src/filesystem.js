@@ -3,6 +3,17 @@ const util = require('util');
 const readdir = util.promisify(fs.readdir);
 const path = require('path');
 
+const IGNORE = ['.git', '.gitignore', 'node_modules'];
+
+var dirTree = {};
+
+async function getDirTree() {
+    if (Object.keys(dirTree).length < 1) {
+        dirTree = await createDirTree(path.join(__dirname, '..'), dirTree, IGNORE);
+    }
+    return dirTree;
+}
+
 async function createDirTree(root, dirTree, except) {
     const stats = fs.lstatSync(root);
     if (stats.isDirectory()) {
@@ -90,4 +101,4 @@ function deleteProject(id) {
     });
 }
 
-module.exports = {createDirTree, updateProject};
+module.exports = {getDirTree, updateProject, deleteProject, createProject};
