@@ -34,7 +34,7 @@ app.post('/', async function (req, res) {
         res.status(tempRes.status).set('Content-Type','text/plain').send("Failed creating project: " + tempRes.msg);
         return;
     }
-    git.pushChanges({'method':'post','files':tempRes.msg['files'],'handle':res});
+    git.pushChanges({'method':'post','files':tempRes.msg,'handle':res}, args);
 });
 
 app.patch('/', async function (req, res) {

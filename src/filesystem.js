@@ -1,20 +1,18 @@
 const fs = require('fs');
 const util = require('util');
 const readdir = util.promisify(fs.readdir);
+const writeFile = util.promisify(fs.writeFile);
 const path = require('path');
+const ignore = require('./util.js').ignore;
 
-const IGNORE = ['.git', '.gitignore', 'node_modules'];
-
-var dirTree = {};
+const ROOT = path.join(__dirname, '..');
+var projectPaths = {};
 
 async function getDirTree() {
-    if (Object.keys(dirTree).length < 1) {
-        dirTree = await createDirTree(path.join(__dirname, '..'), dirTree, IGNORE);
-    }
-    return dirTree;
+    return await createDirTree(path.join(ROOT, '..'), {});
 }
 
-async function createDirTree(root, dirTree, except) {
+async function createDirTree(root, dirTree) {
     const stats = fs.lstatSync(root);
     if (stats.isDirectory()) {
         let files;
@@ -25,11 +23,11 @@ async function createDirTree(root, dirTree, except) {
         }
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            if (typeof dirTree[file] !== 'undefined' || except.includes(file))
+            if (typeof dirTree[file] !== 'undefined' || ignore(file))
                 continue;
             dirTree[file] = {};
             if (fs.lstatSync(path.join(root,file)).isDirectory()) {
-                let subTree = await createDirTree(path.join(root,file), {}, except);
+                let subTree = await createDirTree(path.join(root,file), {});
                 if (subTree.status === 200)
                     dirTree[file] = subTree.data;
                 else
@@ -43,29 +41,48 @@ async function createDirTree(root, dirTree, except) {
     }
 }
 
-function createProject(data) {
-    let files = [];
-    // TODO fix
-    if (fs.existsSync(path.join(__dirname, fileName))){
-        return {'status': 500, 'msg': "Project already exists"};
+async function createProject(data) {
+    let files = parseJson(data);
+    if (files.status !== 200) {
+        return files;
     }
-    fs.writeFile(path.join(__dirname, fileName), JSON.stringify(data), function (err, file) {
-        if (err) {
-            return {'status': 500, 'msg': err};
+    else {
+        files = files.msg;
+    }
+    if (typeof projectPaths[files.id] !== 'undefined'){
+        return {'status': 400, 'msg': "Project already exists"};
+    }
+    let keys = Object.keys(files);
+    let projectDir = path.join(ROOT, files.path);
+    try {
+        fs.mkdirSync(projectDir);
+    } catch (err) {
+        return {'status': 500, 'msg': err};
+    }
+    for (let i = 0; i < keys.length; i++) {
+        if (keys[i] === 'path' || keys[i] === 'id')
+            continue;
+        if (keys[i].length > 3 && keys[i].substr(keys[i].length - 3) === 'CSV')
+        {
+            await writeFile(path.join(projectDir, `${keys[i].substr(0, keys[i].length - 3)}.csv`), files[keys[i]], err => { return {'status': 500, 'msg': err} });
         }
-    });
-    return {'status': 200, 'msg': {'files': files}};
+        else {
+            await writeFile(path.join(projectDir, `${keys[i]}.json`), files[keys[i]], err => { return {'status': 500, 'msg': err} });
+        }
+    }
+    projectPaths[files.id] = files.path;
+    return {'status': 200, 'msg': path.join(projectDir,'*')};
 }
 
 function updateProject(data) {
     // TODO fix
     return new Promise(resolve => {
         let files = [];
-        if (!fs.existsSync(path.join(__dirname, fileName))){
+        if (typeof projectPaths[files.id] === 'undefined'){
             resolve({'status': 404, 'msg': 'Project does not exists'});
             return;
         }
-        fs.readFile(path.join(__dirname, fileName), 'utf8', function (err, data) {
+        fs.readFile(path.join(ROOT, fileName), 'utf8', function (err, data) {
             if (err) {
                 resolve({'status': 500, 'msg': err});
                 return;
@@ -75,7 +92,7 @@ function updateProject(data) {
             resolve({'status': 200, 'msg': result});
         });
     })
-    fs.writeFile(path.join(__dirname, fileName), JSON.stringify(req.body), function (err, file) {
+    fs.writeFile(path.join(ROOT, fileName), JSON.stringify(req.body), function (err, file) {
         if (err) {
             return {'status': 500, 'msg': err};
         }
@@ -88,10 +105,10 @@ function updateProject(data) {
 function deleteProject(id) {
     // TODO fix
     let files = [];
-    if (!fs.existsSync(path.join(__dirname, fileName))){
+    if (typeof projectPaths[files.id] === 'undefined'){
         return {'status': 400, 'msg': "Project does not exists"};
     }
-    fs.unlink(path.join(__dirname, fileName), function (err) {
+    fs.unlink(path.join(ROOT, fileName), function (err) {
         if (err) {
             return {'status': 500, 'msg': err};
         }
@@ -99,6 +116,17 @@ function deleteProject(id) {
             return {'status': 200, 'msg': {'files': files}};
         }
     });
+}
+
+function parseJson(raw) {
+    if (typeof raw.id === 'undefined' ||  typeof raw.name === 'undefined' || typeof raw.params === 'undefined' || (raw.type !== 'wind' && raw.type !== 'sun'))
+        return {'status': 400, 'msg': "Invalid project data"};
+    let res = {'id': raw.id, 'path': path.join(raw.type,raw.name)};
+    let keys = Object.keys(raw.params);
+    for (let i = 0; i < keys.length; i++) {
+        res[keys[i]] = raw.params[keys[i]];
+    }
+    return {'status': 200, 'msg': res};
 }
 
 module.exports = {getDirTree, updateProject, deleteProject, createProject};

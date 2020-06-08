@@ -7,8 +7,7 @@ const MISSING_ARGUMENT = 2;
 const DEFAULT_REPO = "github.com/Michi03/public-data-project";
 const DEFAULT_HOST = "0.0.0.0";
 const DEFAULT_PORT = 2201;
-
-var projects = {};
+const IGNORE = [/.git/, /.gitignore/, /node_modules/];
 
 function parseArgs (args) {
     let res = {port: DEFAULT_PORT, host: DEFAULT_HOST, repoUrl: DEFAULT_REPO};
@@ -73,26 +72,17 @@ function validateReq(req) {
             if (typeof req.body['id'] !== "string" || req.body['id'].length < 1) {
               return {'status': 400, 'msg': 'missing id'};
             }
-            if (typeof projects[req.body['id']] === 'undefined') {
-                return {'status': 404, 'msg': "Project does not exist"};
-            }
             break;
         case 'PATCH':
             contentTypes = ['application/json'];
             if (typeof req.body['id'] !== "string" || req.body['id'].length < 1) {
               return {'status': 400, 'msg': 'missing id'};
             }
-            if (typeof projects[req.body['id']] === 'undefined') {
-                return {'status': 404, 'msg': "Project does not exist"};
-            }
             break;
         case 'POST':
             contentTypes = ['application/json', 'application/zip'];
             if (typeof req.body['id'] !== "string" || req.body['id'].length < 1) {
               return {'status': 400, 'msg': 'missing id'};
-            }
-            if (typeof projects[req.body['id']] !== 'undefined') {
-                return {'status': 400, 'msg': "Project already exists"};
             }
             break;
     }
@@ -110,4 +100,12 @@ function log(req) {
     console.log(`[${time}] -- ${req.method} ${req.path} (${req.ip}) ${JSON.stringify(req.headers)}`);
 }
 
-module.exports = {parseArgs, validateReq, log};
+function ignore(file) {
+    for (let i = 0; i < IGNORE.length; i++) {
+        if (IGNORE[i].exec(file))
+            return true;
+    }
+    return false;
+}
+
+module.exports = {parseArgs, validateReq, log, ignore};

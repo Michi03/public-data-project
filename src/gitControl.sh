@@ -15,12 +15,10 @@ function error() {
 }
 
 function add() {
-    if [ -z $FILES ]; then
-        error "No file to add provided"
+    if [ -z $files ]; then
+        error "No files to add provided"
     fi
-    for file in "${FILES[@]}"; do
-        git add $file
-    done
+    git add $file
 }
 
 function push() {
@@ -50,7 +48,7 @@ while getopts "r:t:m:f:h" o; do
             commitMsg=${OPTARG}
             ;;
         f)
-            IFS=' ' read -ra FILES <<< ${OPTARG}
+            files=${OPTARG}
             ;;
         h)
             printHelp
