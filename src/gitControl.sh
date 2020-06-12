@@ -36,6 +36,12 @@ function push() {
     git push -f https://script:$accessToken@$repoUrl
 }
 
+function reset() {
+    cd $type
+    git reset --hard
+    cd ..
+}
+
 while getopts "r:t:m:f:h:p" o; do
     case "${o}" in
         r)
@@ -56,6 +62,7 @@ while getopts "r:t:m:f:h:p" o; do
             ;;
         x)
             reset=${OPTARG}
+            ;;
         h)
             printHelp
             exit 0
@@ -69,6 +76,10 @@ if [ $# -lt 1 ]; then
 fi
 if [ -z $type ]; then
     error "No project type provided"
+fi
+if [! -z $reset]; then
+    reset
+    exit 0
 fi
 cd $type
 add
