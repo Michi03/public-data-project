@@ -1,3 +1,6 @@
+const path = require('path');
+const fs = require('fs');
+
 // exit codes
 const SUCCESS = 0;
 const INVALID_ARGUMENT = 1;
@@ -9,6 +12,7 @@ const DEFAULT_SUN_REPO = "github.com/Michi03/smart-energy-sun-test";
 const DEFAULT_HOST = "0.0.0.0";
 const DEFAULT_PORT = 2201;
 const IGNORE = [/.git/, /.gitignore/, /node_modules/, /src/, /process.log/, /process.id/, /package.json/, /package-lock.json/, /README.md/];
+const DEFAULT_PROJECT_LIST = path.join(__dirname, '../projectList.json');
 
 function parseArgs (args) {
     let res = {port: DEFAULT_PORT, host: DEFAULT_HOST, windRepo: DEFAULT_WIND_REPO, sunRepo: DEFAULT_SUN_REPO};
@@ -121,8 +125,12 @@ function ignore(file) {
     return false;
 }
 
+function updateProjectList(list) {
+    fs.writeFile(DEFAULT_PROJECT_LIST, list, err => error(err));
+}
+
 function error(msg) {
     console.log('ERROR: ' + msg);
 }
 
-module.exports = {parseArgs, validateReq, log, ignore, error};
+module.exports = {parseArgs, validateReq, log, ignore, updateProjectList, error};

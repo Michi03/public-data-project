@@ -6,6 +6,7 @@ const readFile = util.promisify(fs.readFile);
 const removeDir = require("rimraf");
 const path = require('path');
 const ignore = require('./util.js').ignore;
+const updateProjectList = require('./util.js').updateProjectList;
 
 const ROOT = path.join(__dirname, '..');
 var projects = {};
@@ -87,6 +88,7 @@ async function createProject(data) {
         }
     }
     projects[files.id] = {'path': files.projectDir, 'type': data.type};
+    updateProjectList(projects);
     return {'status': 200, 'msg': path.join(fullPath,'*')};
 }
 
@@ -119,6 +121,8 @@ async function deleteProject(id) {
             return {'status': 500, 'msg': err};
         }
     });
+    delete projects[id];
+    updateProjectList(projects);
     return {'status': 200, 'path': projectPath, 'type': projectType};
 }
 
