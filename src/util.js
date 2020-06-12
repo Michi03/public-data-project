@@ -15,7 +15,7 @@ function parseArgs (args) {
         switch (args[i]) {
         case '--port':
             if (typeof args[i+1] === 'undefined') {
-                console.log('--port requires an argument');
+                error('--port requires an argument');
                 process.exit(INVALID_ARGUMENT);
             }
             else
@@ -23,7 +23,7 @@ function parseArgs (args) {
             break;
         case '--host':
             if (typeof args[i+1] === 'undefined') {
-                console.log('--host requires an argument');
+                error('--host requires an argument');
                 process.exit(INVALID_ARGUMENT);
             }
             else
@@ -31,7 +31,7 @@ function parseArgs (args) {
             break;
         case '--token':
             if (typeof args[i+1] === 'undefined') {
-                console.log('--token requires an argument');
+                error('--token requires an argument');
                 process.exit(INVALID_ARGUMENT);
             }
             else
@@ -39,7 +39,7 @@ function parseArgs (args) {
             break;
         case '--repo':
             if (typeof args[i+1] === 'undefined') {
-                console.log('--repo requires an argument');
+                error('--repo requires an argument');
                 process.exit(INVALID_ARGUMENT);
             }
             else
@@ -58,7 +58,7 @@ function parseArgs (args) {
     }
 
     if (!res.gitToken) {
-        console.log("Missing argument: --token");
+        error("Missing argument: --token");
         process.exit(MISSING_ARGUMENT);
     }
     return res;
@@ -66,24 +66,19 @@ function parseArgs (args) {
 
 function validateReq(req) {
     let contentTypes = [];
+    let requiredFields = [];
     switch (req.method) {
         case 'DELETE':
             contentTypes = ['application/json'];
-            if (typeof req.body['id'] !== "string" || req.body['id'].length < 1) {
-              return {'status': 400, 'msg': 'missing id'};
-            }
+            requiredFields = ['id'];
             break;
         case 'PATCH':
             contentTypes = ['application/json'];
-            if (typeof req.body['id'] !== "string" || req.body['id'].length < 1) {
-              return {'status': 400, 'msg': 'missing id'};
-            }
+            requiredFields = ['id'];
             break;
         case 'POST':
             contentTypes = ['application/json', 'application/zip'];
-            if (typeof req.body['id'] !== "string" || req.body['id'].length < 1) {
-              return {'status': 400, 'msg': 'missing id'};
-            }
+            requiredFields = ['id'];
             break;
     }
     if (typeof req.header('Content-Type') !== 'string' || !contentTypes.includes(req.header('Content-Type').toLowerCase())) {
@@ -92,12 +87,16 @@ function validateReq(req) {
     if (typeof req.body !== "object" || req.body === null) {
       return {'status': 400, 'msg': 'could not read body'};
     }
+    for (let i = 0; i < requiredFields.length; i++) {
+        if (typeof req.body[requiredFields[i]] !== "string" || req.body[requiredFields[i]].length < 1)
+            return {'status': 400, 'msg': 'missing ' + requiredFields[i]};
+    }
     return {'status': 200, 'msg': 'okay'};
 }
 
 function log(req) {
     const time = new Date();
-    console.log(`[${time}] -- ${req.method} ${req.path} (${req.ip}) ${JSON.stringify(req.headers)}`);
+    console.log(`[${time}] -- ${req.method} ${req.path} {${JSON.stringify(req.query)}} (${req.ip}) ${JSON.stringify(req.headers)}`);
 }
 
 function ignore(file) {
@@ -108,4 +107,8 @@ function ignore(file) {
     return false;
 }
 
-module.exports = {parseArgs, validateReq, log, ignore};
+function error(msg) {
+    console.log('ERROR: ' + msg);
+}
+
+module.exports = {parseArgs, validateReq, log, ignore, error};

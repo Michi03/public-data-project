@@ -6,7 +6,7 @@ function printHelp() {
     echo "  -r REPOSITORY     set the repository where the data is stored"
     echo "  -t ACCESS_TOKEN   set the git access token used"
     echo "  -m MESSAGE        provide a commit message"
-    echo "  -f FILENAME       set the path to the file that should be committed"
+    echo "  -f FILENAMES      set the path to the files that should be committed"
 }
 
 function error() {
@@ -18,7 +18,7 @@ function add() {
     if [ -z $files ]; then
         error "No files to add provided"
     fi
-    git add $file
+    git add $files
 }
 
 function push() {

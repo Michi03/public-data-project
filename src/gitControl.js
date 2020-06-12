@@ -1,10 +1,11 @@
 const {spawn} = require("child_process");
+const error = require('./util.js').error;
 
 var projects = [];
 
 function pushChanges(event, args) {
     if (typeof event.files !== 'string' || typeof event.handle === 'undefined' || typeof args.gitToken === "undefined" || typeof args.repoUrl === "undefined") {
-        console.log("Invalid call of pushChanges");
+        error("Invalid call of pushChanges");
         event.handle.status(500).set('Content-Type','text/plain').send("Internal server error!");
         return;
     }
@@ -24,13 +25,13 @@ function pushChanges(event, args) {
     const addProc = spawn('./gitControl.sh', ["-t", args.gitToken, "-r", args.repoUrl, "-m", commitMessage, "-f", event.files]);
     addProc.stdout.on('data', data => console.log(`stdout: ${data}`));
     addProc.stderr.on('data', data => console.log(`stderr: ${data}`));
-    addProc.on('error', (error) => {
-        event.handle.status(500).set('Content-Type','text/plain').send("Commiting changes failed with: " + error.message);
+    addProc.on('error', (err) => {
+        event.handle.status(500).set('Content-Type','text/plain').send("Commiting changes failed with: " + err.message);
         return;
     });
     addProc.on('exit', code => {
         if (code !== 0) {
-            event.handle.status(500).set('Content-Type','text/plain').send("Commiting changes failed");
+            event.handle.status(500).set('Content-Type','text/plain').send("Commiting changes failed with code: " + code);
             return;
         }
         else {
@@ -40,4 +41,20 @@ function pushChanges(event, args) {
     });
 }
 
-module.exports = {pushChanges};
+function reset() {
+    const addProc = spawn('./gitControl.sh', ["-x"]);
+    addProc.stdout.on('data', data => console.log(`stdout: ${data}`));
+    addProc.stderr.on('data', data => console.log(`stderr: ${data}`));
+    addProc.on('error', (err) => {
+        error('Resetting repo failed with: ' + err.message);
+        return;
+    });
+    addProc.on('exit', code => {
+        if (code !== 0) {
+            error('Resetting repo failed with code ' + code);
+            return;
+        }
+    });
+}
+
+module.exports = {pushChanges, reset};

@@ -1,1 +1,0 @@
-{"wake_model":"park","wind_data_format":"weibull","interpolation_method":"bilinear","objective_function":"AEP","turbine_height_wind_speed_adjustment":true,"num_wind_directions":72,"num_wind_speeds":20,"wake_decay_constant":0.045,"loss_wind_speed":98.5,"loss_wake_effect":99.9,"loss_power_curve":98.8,"loss_plant_performance":98.5}

@@ -13,7 +13,7 @@ const args = util.parseArgs(process.argv.slice(2));
 
 app.get('/', async function (req, res) {
     util.log(req);
-    let dirTree = await fs.getDirTree();
+    let dirTree = await fs.getDirTree(req.query['recursive']);
     if (dirTree.status !== 200) {
         res.status(dirTree.status).set('Content-Type','text/plain').send("Failed to create directory tree: " + dirTree.data);
         return;
@@ -46,10 +46,11 @@ app.patch('/', async function (req, res) {
     }
     tempRes = await fs.updateProject(req.body);
     if (updateRes.status !== 200) {
+        git.reset();
         res.status(updateRes.status).set('Content-Type','text/plain').send("Failed updating project: " + tempRes.msg);
         return;
     }
-    git.pushChanges({'method':'patch','files':tempRes.msg['files'],'handle':res});
+    git.pushChanges({'method':'patch','files':tempRes.msg,'handle':res}, args);
 });
 
 app.delete('/', async function (req, res) {

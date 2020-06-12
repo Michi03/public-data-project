@@ -2,17 +2,23 @@ const fs = require('fs');
 const util = require('util');
 const readdir = util.promisify(fs.readdir);
 const writeFile = util.promisify(fs.writeFile);
+const readFile = util.promisify(fs.readFile);
 const path = require('path');
 const ignore = require('./util.js').ignore;
 
 const ROOT = path.join(__dirname, '..');
 var projectPaths = {};
 
-async function getDirTree() {
-    return await createDirTree(path.join(ROOT, '..'), {});
+async function getDirTree(depth) {
+    if (typeof depth === 'string')
+        depth = Number(depth);
+    return await createDirTree(ROOT, {}, depth);
 }
 
-async function createDirTree(root, dirTree) {
+async function createDirTree(root, dirTree, depth) {
+    if (depth === 0) {
+        return {'status': 200, data: dirTree};
+    }
     const stats = fs.lstatSync(root);
     if (stats.isDirectory()) {
         let files;
@@ -27,7 +33,7 @@ async function createDirTree(root, dirTree) {
                 continue;
             dirTree[file] = {};
             if (fs.lstatSync(path.join(root,file)).isDirectory()) {
-                let subTree = await createDirTree(path.join(root,file), {});
+                let subTree = await createDirTree(path.join(root,file), {}, depth - 1);
                 if (subTree.status === 200)
                     dirTree[file] = subTree.data;
                 else
@@ -49,63 +55,55 @@ async function createProject(data) {
     else {
         files = files.msg;
     }
-    if (typeof projectPaths[files.id] !== 'undefined'){
-        return {'status': 400, 'msg': "Project already exists"};
-    }
     let keys = Object.keys(files);
-    let projectDir = path.join(ROOT, files.path);
+    let projectDir = path.join(ROOT, files.projectDir);
+    let fullPath = path.join(ROOT, files.path);
+    if (!fs.existsSync(projectDir)){
+        try {
+            fs.mkdirSync(projectDir);
+        } catch (err) {
+            return {'status': 500, 'msg': err};
+        }
+    }
     try {
-        fs.mkdirSync(projectDir);
+        fs.mkdirSync(fullPath);
     } catch (err) {
         return {'status': 500, 'msg': err};
     }
     for (let i = 0; i < keys.length; i++) {
-        if (keys[i] === 'path' || keys[i] === 'id')
+        if (keys[i] === 'path' || keys[i] === 'id' || keys[i] === 'projectDir')
             continue;
         if (keys[i].length > 3 && keys[i].substr(keys[i].length - 3) === 'CSV')
         {
-            await writeFile(path.join(projectDir, `${keys[i].substr(0, keys[i].length - 3)}.csv`), files[keys[i]], err => { return {'status': 500, 'msg': err} });
+            await writeFile(path.join(fullPath, `${keys[i].substr(0, keys[i].length - 3)}.csv`), files[keys[i]], err => { return {'status': 500, 'msg': err} });
+        }
+        else if (keys[i].length > 3 && keys[i].substr(keys[i].length - 3) === 'EPW')
+        {
+            await writeFile(path.join(fullPath, `${keys[i].substr(0, keys[i].length - 3)}.epw`), files[keys[i]], err => { return {'status': 500, 'msg': err} });
         }
         else {
-            await writeFile(path.join(projectDir, `${keys[i]}.json`), files[keys[i]], err => { return {'status': 500, 'msg': err} });
+            await writeFile(path.join(fullPath, `${keys[i]}.json`), JSON.stringify(files[keys[i]]), err => { return {'status': 500, 'msg': err} });
         }
     }
     projectPaths[files.id] = files.path;
-    return {'status': 200, 'msg': path.join(projectDir,'*')};
+    return {'status': 200, 'msg': path.join(fullPath,'*')};
 }
 
-function updateProject(data) {
-    // TODO fix
-    return new Promise(resolve => {
-        let files = [];
-        if (typeof projectPaths[files.id] === 'undefined'){
-            resolve({'status': 404, 'msg': 'Project does not exists'});
-            return;
-        }
-        fs.readFile(path.join(ROOT, fileName), 'utf8', function (err, data) {
-            if (err) {
-                resolve({'status': 500, 'msg': err});
-                return;
-            }
-            let result = JSON.parse(data);
-            Object.keys(project).forEach(key => result[key] = project[key]);
-            resolve({'status': 200, 'msg': result});
-        });
-    })
-    fs.writeFile(path.join(ROOT, fileName), JSON.stringify(req.body), function (err, file) {
-        if (err) {
-            return {'status': 500, 'msg': err};
-        }
-        else {
-            return {'status': 200, 'msg': {'files': files}};
-        }
-    });
+async function updateProject(data) {
+    let fileNames = Object.keys(data);
+    for (let i = 0; i < fileNames.length; i++) {
+        let fileName = path.join(ROOT, fileNames[i]);
+        if (fs.existsSync(fileName))
+            await fs.writeFile(fileName, JSON.stringify(data[fileNames[i]]), err => { return {'status': 500, 'msg': err} });
+        else
+            return {'status': 404, 'msg': fileNames[i] + ' not found'};
+    }
+    return {'status': 200, 'msg': fileNames};
 }
 
 function deleteProject(id) {
-    // TODO fix
     let files = [];
-    if (typeof projectPaths[files.id] === 'undefined'){
+    if (typeof projectPaths[files.id] === 'undefined') {
         return {'status': 400, 'msg': "Project does not exists"};
     }
     fs.unlink(path.join(ROOT, fileName), function (err) {
@@ -113,18 +111,22 @@ function deleteProject(id) {
             return {'status': 500, 'msg': err};
         }
         else {
-            return {'status': 200, 'msg': {'files': files}};
+
         }
     });
+    delete projectPaths[files.id];
+    return {'status': 200, 'msg': {'files': files}};
 }
 
 function parseJson(raw) {
-    if (typeof raw.id === 'undefined' ||  typeof raw.name === 'undefined' || typeof raw.params === 'undefined' || (raw.type !== 'wind' && raw.type !== 'sun'))
+    if (typeof raw.id === 'undefined' ||  typeof raw.name !== 'string' || typeof raw.parameters === 'undefined' || (raw.type !== 'wind' && raw.type !== 'sun'))
         return {'status': 400, 'msg': "Invalid project data"};
-    let res = {'id': raw.id, 'path': path.join(raw.type,raw.name)};
-    let keys = Object.keys(raw.params);
+    let d = new Date();
+    let projectDir = path.join(raw.type, raw.name.replace(/ /g, '_'));
+    let res = {'id': raw.id, 'projectDir': projectDir, 'path': path.join(projectDir, d.toJSON())};
+    let keys = Object.keys(raw.parameters);
     for (let i = 0; i < keys.length; i++) {
-        res[keys[i]] = raw.params[keys[i]];
+        res[keys[i]] = raw.parameters[keys[i]];
     }
     return {'status': 200, 'msg': res};
 }
