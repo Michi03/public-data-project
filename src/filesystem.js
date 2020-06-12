@@ -3,6 +3,7 @@ const util = require('util');
 const readdir = util.promisify(fs.readdir);
 const writeFile = util.promisify(fs.writeFile);
 const readFile = util.promisify(fs.readFile);
+const removeDir = require("rimraf");
 const path = require('path');
 const ignore = require('./util.js').ignore;
 
@@ -85,37 +86,40 @@ async function createProject(data) {
             await writeFile(path.join(fullPath, `${keys[i]}.json`), JSON.stringify(files[keys[i]]), err => { return {'status': 500, 'msg': err} });
         }
     }
-    projectPaths[files.id] = files.path;
+    projectPaths[files.id] = files.projectDir;
     return {'status': 200, 'msg': path.join(fullPath,'*')};
 }
 
 async function updateProject(data) {
+    let files = "";
     let fileNames = Object.keys(data);
     for (let i = 0; i < fileNames.length; i++) {
         let fileName = path.join(ROOT, fileNames[i]);
-        if (fs.existsSync(fileName))
+        if (fs.existsSync(fileName)) {
             await fs.writeFile(fileName, JSON.stringify(data[fileNames[i]]), err => { return {'status': 500, 'msg': err} });
+            files += ' ' + fileName;
+        }
         else
             return {'status': 404, 'msg': fileNames[i] + ' not found'};
     }
-    return {'status': 200, 'msg': fileNames};
+    if (files[0] === ' ')
+        files = files.substr(1);
+    return {'status': 200, 'msg': files};
 }
 
-function deleteProject(id) {
+async function deleteProject(id) {
+    console.log(JSON.stringify(projectPaths));
     let files = [];
-    if (typeof projectPaths[files.id] === 'undefined') {
-        return {'status': 400, 'msg': "Project does not exists"};
+    if (typeof projectPaths[id] === 'undefined') {
+        return {'status': 404, 'msg': "Project " + id + " not found"};
     }
-    fs.unlink(path.join(ROOT, fileName), function (err) {
+    let projectPath = path.join(ROOT, projectPaths[id]);
+    await removeDir(projectPath, function (err) {
         if (err) {
             return {'status': 500, 'msg': err};
         }
-        else {
-
-        }
     });
-    delete projectPaths[files.id];
-    return {'status': 200, 'msg': {'files': files}};
+    return {'status': 200, 'msg': projectPath};
 }
 
 function parseJson(raw) {

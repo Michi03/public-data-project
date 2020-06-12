@@ -45,9 +45,9 @@ app.patch('/', async function (req, res) {
         return;
     }
     tempRes = await fs.updateProject(req.body);
-    if (updateRes.status !== 200) {
+    if (tempRes.status !== 200) {
         git.reset();
-        res.status(updateRes.status).set('Content-Type','text/plain').send("Failed updating project: " + tempRes.msg);
+        res.status(tempRes.status).set('Content-Type','text/plain').send("Failed updating project: " + tempRes.msg);
         return;
     }
     git.pushChanges({'method':'patch','files':tempRes.msg,'handle':res}, args);
@@ -60,12 +60,12 @@ app.delete('/', async function (req, res) {
         res.status(tempRes.status).set('Content-Type','text/plain').send("Invalid request: " + tempRes.msg);
         return;
     }
-    tempRes = await fs.deleteProject(req.body);
-    if (updateRes.status !== 200) {
-        res.status(updateRes.status).set('Content-Type','text/plain').send("Failed deleting project: " + tempRes.msg);
+    tempRes = await fs.deleteProject(req.query.id);
+    if (tempRes.status !== 200) {
+        res.status(tempRes.status).set('Content-Type','text/plain').send("Failed deleting project: " + tempRes.msg);
         return;
     }
-    git.pushChanges({'method':'delete','files':tempRes.msg['files'],'handle':res});
+    git.pushChanges({'method':'delete','files':tempRes.msg,'handle':res}, args);
 });
 
 app.listen(args.port, args.host, function () {

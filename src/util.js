@@ -67,21 +67,22 @@ function parseArgs (args) {
 function validateReq(req) {
     let contentTypes = [];
     let requiredFields = [];
+    let requiredParams = [];
     switch (req.method) {
         case 'DELETE':
-            contentTypes = ['application/json'];
-            requiredFields = ['id'];
+            requiredParams.push('id');
             break;
         case 'PATCH':
-            contentTypes = ['application/json'];
-            requiredFields = ['id'];
+            contentTypes.push('application/json');
             break;
         case 'POST':
-            contentTypes = ['application/json', 'application/zip'];
-            requiredFields = ['id'];
+            contentTypes.push('application/json');
+            requiredFields.push('id');
+            requiredFields.push('type');
+            requiredFields.push('name');
             break;
     }
-    if (typeof req.header('Content-Type') !== 'string' || !contentTypes.includes(req.header('Content-Type').toLowerCase())) {
+    if (contentTypes.length > 1 && (typeof req.header('Content-Type') !== 'string' || !contentTypes.includes(req.header('Content-Type').toLowerCase()))) {
       return {'status': 400, 'msg': `content-type ${req.header('Content-Type')} not supported, supported types are [${contentTypes}]`};
     }
     if (typeof req.body !== "object" || req.body === null) {
@@ -89,7 +90,11 @@ function validateReq(req) {
     }
     for (let i = 0; i < requiredFields.length; i++) {
         if (typeof req.body[requiredFields[i]] !== "string" || req.body[requiredFields[i]].length < 1)
-            return {'status': 400, 'msg': 'missing ' + requiredFields[i]};
+            return {'status': 400, 'msg': 'missing field: ' + requiredFields[i]};
+    }
+    for (let i = 0; i < requiredParams.length; i++) {
+        if (typeof req.query[requiredParams[i]] !== "string" || req.query[requiredParams[i]].length < 1)
+            return {'status': 400, 'msg': 'missing parameter: ' + requiredParams[i]};
     }
     return {'status': 200, 'msg': 'okay'};
 }
