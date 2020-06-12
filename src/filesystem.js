@@ -112,7 +112,7 @@ async function deleteProject(id) {
     if (typeof projects[id] === 'undefined') {
         return {'status': 404, 'msg': "Project " + id + " not found"};
     }
-    let project = path.join(ROOT, projects[id].path);
+    let projectPath = path.join(ROOT, projects[id].path);
     let projectType = projects[id].type;
     await removeDir(projectPath, function (err) {
         if (err) {

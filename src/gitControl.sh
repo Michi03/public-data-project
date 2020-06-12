@@ -1,5 +1,4 @@
 #!/bin/bash
-# TODO -f support for multiple files
 function printHelp() {
     echo "Commands:"
     echo "  -h                prints this message"
@@ -37,11 +36,11 @@ function push() {
 }
 
 function reset() {
-    cd ../$type
+    cd ../$projectType
     git reset --hard
 }
 
-while getopts "r:t:m:f:h:p" o; do
+while getopts "r:t:m:f:p:x:h:" o; do
     case "${o}" in
         r)
             repoUrl=${OPTARG}
@@ -57,7 +56,7 @@ while getopts "r:t:m:f:h:p" o; do
             files=${OPTARG}
             ;;
         p)
-            type=${OPTARG}
+            projectType=${OPTARG}
             ;;
         x)
             reset=TRUE
@@ -73,14 +72,14 @@ if [ $# -lt 1 ]; then
     printHelp
     exit 1
 fi
-if [ -z $type ]; then
+if [ -z $projectType ]; then
     error "No project type provided"
 fi
 if [ $reset == TRUE ]; then
     reset
     exit 0
 fi
-cd ../$type
+cd ../$projectType
 add
 push
 exit 0

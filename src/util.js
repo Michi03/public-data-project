@@ -8,7 +8,7 @@ const DEFAULT_WIND_REPO = "github.com/Michi03/smart-energy-wind-test";
 const DEFAULT_SUN_REPO = "github.com/Michi03/smart-energy-wind-test";
 const DEFAULT_HOST = "0.0.0.0";
 const DEFAULT_PORT = 2201;
-const IGNORE = [/.git/, /.gitignore/, /node_modules/];
+const IGNORE = [/.git/, /.gitignore/, /node_modules/, /src/, /process.log/, /process.id/, /package.json/, /package-lock.json/, /README.md/];
 
 function parseArgs (args) {
     let res = {port: DEFAULT_PORT, host: DEFAULT_HOST, windRepo: DEFAULT_WIND_REPO, sunRepo: DEFAULT_SUN_REPO};
