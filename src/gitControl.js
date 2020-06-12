@@ -22,7 +22,16 @@ function pushChanges(event, args) {
         commitMessage = `"Removed ${event.files}"`;
         okayMessage = 'Successfully removed project';
     }
-    const addProc = spawn('./gitControl.sh', ["-t", args.gitToken, "-r", args.repoUrl, "-m", commitMessage, "-f", event.files, "-p", event.type]);
+    let repoUrl = '';
+    if (event.type === 'wind')
+        repoUrl = args.windRepo;
+    else if (event.type === 'sun')
+        repoUrl = args.sunRepo;
+    else {
+        event.handle.status(500).set('Content-Type','text/plain').send("Commiting changes failed due to internal error");
+        return;
+    }
+    const addProc = spawn('./gitControl.sh', ["-t", args.gitToken, "-r", repoUrl, "-m", commitMessage, "-p", event.type, "-f", event.files]);
     addProc.stdout.on('data', data => console.log(`stdout: ${data}`));
     addProc.stderr.on('data', data => console.log(`stderr: ${data}`));
     addProc.on('error', (err) => {

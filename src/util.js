@@ -4,13 +4,14 @@ const INVALID_ARGUMENT = 1;
 const MISSING_ARGUMENT = 2;
 
 // default values
-const DEFAULT_REPO = "github.com/Michi03/public-data-project";
+const DEFAULT_WIND_REPO = "github.com/Michi03/smart-energy-wind-test";
+const DEFAULT_SUN_REPO = "github.com/Michi03/smart-energy-wind-test";
 const DEFAULT_HOST = "0.0.0.0";
 const DEFAULT_PORT = 2201;
 const IGNORE = [/.git/, /.gitignore/, /node_modules/];
 
 function parseArgs (args) {
-    let res = {port: DEFAULT_PORT, host: DEFAULT_HOST, repoUrl: DEFAULT_REPO};
+    let res = {port: DEFAULT_PORT, host: DEFAULT_HOST, windRepo: DEFAULT_WIND_REPO, sunRepo: DEFAULT_SUN_REPO};
     for (let i = 0; i < args.length; i++) {
         switch (args[i]) {
         case '--port':
@@ -37,13 +38,21 @@ function parseArgs (args) {
             else
                 res.gitToken = args[i+1];
             break;
-        case '--repo':
+        case '--wind-repo':
             if (typeof args[i+1] === 'undefined') {
-                error('--repo requires an argument');
+                error('--wind-repo requires an argument');
                 process.exit(INVALID_ARGUMENT);
             }
             else
-                res.repoUrl = args[i+1];
+                res.windRepo = args[i+1];
+            break;
+        case '--sun-repo':
+            if (typeof args[i+1] === 'undefined') {
+                error('--sun-repo requires an argument');
+                process.exit(INVALID_ARGUMENT);
+            }
+            else
+                res.sunRepo = args[i+1];
             break;
         case '--help':
             console.log("Public Data Synchronization\n\

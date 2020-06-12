@@ -37,9 +37,8 @@ function push() {
 }
 
 function reset() {
-    cd $type
+    cd ../$type
     git reset --hard
-    cd ..
 }
 
 while getopts "r:t:m:f:h:p" o; do
@@ -61,7 +60,7 @@ while getopts "r:t:m:f:h:p" o; do
             type=${OPTARG}
             ;;
         x)
-            reset=${OPTARG}
+            reset=TRUE
             ;;
         h)
             printHelp
@@ -77,12 +76,11 @@ fi
 if [ -z $type ]; then
     error "No project type provided"
 fi
-if [! -z $reset]; then
+if [ $reset == TRUE ]; then
     reset
     exit 0
 fi
-cd $type
+cd ../$type
 add
 push
-cd ..
 exit 0
