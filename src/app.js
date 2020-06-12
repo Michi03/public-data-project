@@ -34,11 +34,12 @@ app.post('/', async function (req, res) {
         res.status(tempRes.status).set('Content-Type','text/plain').send("Failed creating project: " + tempRes.msg);
         return;
     }
-    git.pushChanges({'method':'post','files':tempRes.msg,'handle':res}, args);
+    git.pushChanges({'method':'post','files':tempRes.msg,'handle':res,'type':req.body.type}, args);
 });
 
 app.patch('/', async function (req, res) {
-    util.log(req);
+    res.status(503).set('Content-Type','text/plain').send("I'm sorry, this route is currently not avaialable. Please try again, later.");
+/*    util.log(req);
     let tempRes = await util.validateReq(req);
     if (tempRes.status !== 200) {
         res.status(tempRes.status).set('Content-Type','text/plain').send("Invalid request: " + tempRes.msg);
@@ -50,7 +51,7 @@ app.patch('/', async function (req, res) {
         res.status(tempRes.status).set('Content-Type','text/plain').send("Failed updating project: " + tempRes.msg);
         return;
     }
-    git.pushChanges({'method':'patch','files':tempRes.msg,'handle':res}, args);
+    git.pushChanges({'method':'patch','files':tempRes.msg,'handle':res,'type':req.body.type}, args);*/
 });
 
 app.delete('/', async function (req, res) {
@@ -65,7 +66,7 @@ app.delete('/', async function (req, res) {
         res.status(tempRes.status).set('Content-Type','text/plain').send("Failed deleting project: " + tempRes.msg);
         return;
     }
-    git.pushChanges({'method':'delete','files':tempRes.msg,'handle':res}, args);
+    git.pushChanges({'method':'delete','files':tempRes.path,'handle':res,'type':tempRes.type}, args);
 });
 
 app.listen(args.port, args.host, function () {

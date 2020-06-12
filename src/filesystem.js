@@ -8,7 +8,7 @@ const path = require('path');
 const ignore = require('./util.js').ignore;
 
 const ROOT = path.join(__dirname, '..');
-var projectPaths = {};
+var projects = {};
 
 async function getDirTree(depth) {
     if (typeof depth === 'string')
@@ -86,7 +86,7 @@ async function createProject(data) {
             await writeFile(path.join(fullPath, `${keys[i]}.json`), JSON.stringify(files[keys[i]]), err => { return {'status': 500, 'msg': err} });
         }
     }
-    projectPaths[files.id] = files.projectDir;
+    projects[files.id] = {'path': files.projectDir, 'type': data.type};
     return {'status': 200, 'msg': path.join(fullPath,'*')};
 }
 
@@ -108,18 +108,18 @@ async function updateProject(data) {
 }
 
 async function deleteProject(id) {
-    console.log(JSON.stringify(projectPaths));
     let files = [];
-    if (typeof projectPaths[id] === 'undefined') {
+    if (typeof projects[id] === 'undefined') {
         return {'status': 404, 'msg': "Project " + id + " not found"};
     }
-    let projectPath = path.join(ROOT, projectPaths[id]);
+    let project = path.join(ROOT, projects[id].path);
+    let projectType = projects[id].type;
     await removeDir(projectPath, function (err) {
         if (err) {
             return {'status': 500, 'msg': err};
         }
     });
-    return {'status': 200, 'msg': projectPath};
+    return {'status': 200, 'path': projectPath, 'type': projectType};
 }
 
 function parseJson(raw) {

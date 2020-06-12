@@ -3,6 +3,7 @@
 function printHelp() {
     echo "Commands:"
     echo "  -h                prints this message"
+    echo "  -p PROJECT_TYPE   type of the project, has to be either 'wind' or 'sun'"
     echo "  -r REPOSITORY     set the repository where the data is stored"
     echo "  -t ACCESS_TOKEN   set the git access token used"
     echo "  -m MESSAGE        provide a commit message"
@@ -35,7 +36,7 @@ function push() {
     git push -f https://script:$accessToken@$repoUrl
 }
 
-while getopts "r:t:m:f:h" o; do
+while getopts "r:t:m:f:h:p" o; do
     case "${o}" in
         r)
             repoUrl=${OPTARG}
@@ -50,6 +51,11 @@ while getopts "r:t:m:f:h" o; do
         f)
             files=${OPTARG}
             ;;
+        p)
+            type=${OPTARG}
+            ;;
+        x)
+            reset=${OPTARG}
         h)
             printHelp
             exit 0
@@ -61,6 +67,11 @@ if [ $# -lt 1 ]; then
     printHelp
     exit 1
 fi
+if [ -z $type ]; then
+    error "No project type provided"
+fi
+cd $type
 add
 push
+cd ..
 exit 0

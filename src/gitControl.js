@@ -22,7 +22,7 @@ function pushChanges(event, args) {
         commitMessage = `"Removed ${event.files}"`;
         okayMessage = 'Successfully removed project';
     }
-    const addProc = spawn('./gitControl.sh', ["-t", args.gitToken, "-r", args.repoUrl, "-m", commitMessage, "-f", event.files]);
+    const addProc = spawn('./gitControl.sh', ["-t", args.gitToken, "-r", args.repoUrl, "-m", commitMessage, "-f", event.files, "-p", event.type]);
     addProc.stdout.on('data', data => console.log(`stdout: ${data}`));
     addProc.stderr.on('data', data => console.log(`stderr: ${data}`));
     addProc.on('error', (err) => {
@@ -41,8 +41,12 @@ function pushChanges(event, args) {
     });
 }
 
-function reset() {
-    const addProc = spawn('./gitControl.sh', ["-x"]);
+function reset(type) {
+    if (type !== "sun" && type !== "wind") {
+        error('Invalid call to reset: type has to be either sun or wind');
+        return;
+    }
+    const addProc = spawn('./gitControl.sh', ["-x", "-p", type]);
     addProc.stdout.on('data', data => console.log(`stdout: ${data}`));
     addProc.stderr.on('data', data => console.log(`stderr: ${data}`));
     addProc.on('error', (err) => {
