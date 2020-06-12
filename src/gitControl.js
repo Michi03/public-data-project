@@ -4,7 +4,7 @@ const error = require('./util.js').error;
 var projects = [];
 
 function pushChanges(event, args) {
-    if (typeof event.files !== 'string' || typeof event.handle === 'undefined' || typeof args.gitToken === "undefined" || typeof args.repoUrl === "undefined") {
+    if (typeof event.files !== 'string' || typeof event.handle === 'undefined' || typeof args.gitToken === "undefined") {
         error("Invalid call of pushChanges");
         event.handle.status(500).set('Content-Type','text/plain').send("Internal server error!");
         return;
