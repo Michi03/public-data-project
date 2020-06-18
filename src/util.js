@@ -34,13 +34,21 @@ function parseArgs (args) {
             else
                 res.host = args[i+1];
             break;
-        case '--token':
+        case '--git-token':
             if (typeof args[i+1] === 'undefined') {
-                error('--token requires an argument');
+                error('--git-token requires an argument');
                 process.exit(INVALID_ARGUMENT);
             }
             else
                 res.gitToken = args[i+1];
+            break;
+        case '--auth-token':
+            if (typeof args[i+1] === 'undefined') {
+                error('--auth-token requires an argument');
+                process.exit(INVALID_ARGUMENT);
+            }
+            else
+                res.authToken = args[i+1];
             break;
         case '--wind-repo':
             if (typeof args[i+1] === 'undefined') {
@@ -60,18 +68,23 @@ function parseArgs (args) {
             break;
         case '--help':
             console.log("Public Data Synchronization\n\
-              --help   print this message\n\
-              --host   set the host address of the server (default 0.0.0.0)\n\
-              --port   set the port of the server (default 2201)\n\
-              --repo   url of the repository that holds the data (default github.com/Michi03/public-data-project)\n\
-              --token  git access token used to update data repository\n")
+              --help       print this message\n\
+              --host       set the host address of the server (default 0.0.0.0)\n\
+              --port       set the port of the server (default 2201)\n\
+              --repo       url of the repository that holds the data (default github.com/Michi03/public-data-project)\n\
+              --auth-token auth token used to authorize changes\n\
+              --git-token  git access token used to update data repository\n")
             process.exit(SUCCESS);
             break;
         }
     }
 
     if (!res.gitToken) {
-        error("Missing argument: --token");
+        error("Missing argument: --git-token");
+        process.exit(MISSING_ARGUMENT);
+    }
+    if (!res.authToken) {
+        error("Missing argument: --auth-token");
         process.exit(MISSING_ARGUMENT);
     }
     return res;

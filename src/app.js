@@ -24,6 +24,10 @@ app.get('/', async function (req, res) {
 
 app.post('/', async function (req, res) {
     util.log(req);
+    if (req.header('Authorization') !== `Basic ${args.authToken}`) {
+        res.status(401).set('Content-Type','text/plain').send("Invalid request: Invalid Authorization token");
+        return;
+    }
     let tempRes = await util.validateReq(req);
     if (tempRes.status !== 200) {
         res.status(tempRes.status).set('Content-Type','text/plain').send("Invalid request: " + tempRes.msg);
